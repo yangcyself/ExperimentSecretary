@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+import re
 
 
 def convertTime(timearray, zerotime = None):
@@ -111,6 +111,7 @@ class readOnelineVector(readVector):
     """
     the class that reads a block like.
     xxxxxxx [-0.577775   0.223376  -0.315034   0.115284]
+    Note: if there is no brackts, the array should just follows the trigger
     """
     def __init__(self,stor,trigger, passreader = None, sep = ' '):
         super().__init__(sep = sep)
@@ -122,7 +123,7 @@ class readOnelineVector(readVector):
     def __call__(self,f,msg=None):
         msg = f.readline() if (msg is None) else msg
         assert(self.trigger in msg)
-        vec = self.readvector(f,msg)
+        vec = self.readvector(f,msg[len(self.trigger):])
         self.stor(vec)
         return self.passreader, None
 
@@ -148,6 +149,29 @@ class readTimedPrettyPrint(readVector):
         a = f.readline()
         vec = self.readvector(f,a)
         self.stor(t,vec)
+        return self.passreader, None
+
+
+class readRegularExpression(FMSreader):
+    """
+    The class that read a regular expression
+        It calls `findall` of a regular expression and pass the result directly to stor
+    And the reader will keep on reading until the findall finally matches something
+    """
+    def __init__(self,stor,trigger,rgex=r"(.*)",passreader = None):
+        super().__init__()
+        self.stor = stor
+        self.passreader = passreader
+        self.trigger = trigger
+        self.rgex = rgex
+
+    def __call__(self,f,msg=None):
+        msg = f.readline() if (msg is None) else msg
+        res = re.findall(self.rgex, msg)
+        while(not len(res)):
+            msg = f.readline()
+            res = re.findall(self.rgex, msg)
+        self.stor(res)
         return self.passreader, None
 
 
@@ -300,6 +324,13 @@ class SequenceParsser(Parsser):
         self.readers.append(pars)
         return stor
     
+    def addItemParser(self,trigger,name, parsType = readRegularExpression, **kwarg):
+        stor = simpleStor(name)
+        pars = parsType(stor,trigger, passreader= None, **kwarg)
+        self.readers.append(pars)
+        return stor
+    
+
     def __call__(self, f, msg = None):
         _, msg = self.passinit(f,msg)
         while(True):
