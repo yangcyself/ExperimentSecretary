@@ -8,7 +8,7 @@ def convertTime(timearray, zerotime = None):
         zerotime = timearray[0]
     return (np.array(timearray) - zerotime)/1e6
 
-class FMSreader:
+class FSMreader:
     def __call__(self,f,msg):
         """
             f: opened file
@@ -18,7 +18,7 @@ class FMSreader:
         raise NotImplementedError
 
 
-class readPassInit(FMSreader):
+class readPassInit(FSMreader):
     """
     the class that goes through headning lines.
         When it meets a trigger, it calles the correspoinding reader
@@ -37,7 +37,7 @@ class readPassInit(FMSreader):
                 return None, a
 
 
-class readVector(FMSreader):
+class readVector(FSMreader):
     """
     the class that provides functions to read a vector (this is still a virtual class)
         Vector form can be:
@@ -152,7 +152,7 @@ class readTimedPrettyPrint(readVector):
         return self.passreader, None
 
 
-class readRegularExpression(FMSreader):
+class readRegularExpression(FSMreader):
     """
     The class that read a regular expression
         It calls `findall` of a regular expression and pass the result directly to stor
@@ -260,7 +260,7 @@ class simpleTimedVecterStor(simpleVecterStor):
 ##################  PARSERS #################################################
 #############################################################################
 
-class Parsser:
+class Parser:
     """
     The log parser for processing the experiments
         When called, it calls its readers one by one according to the FSM transition rule
@@ -280,9 +280,9 @@ class Parsser:
                     raise ex
         return msg
 
-class TriggerParsser(Parsser):
+class TriggerParser(Parser):
     """
-        A parsser drived by triggers
+        A Parser drived by triggers
     """
     def __init__(self):
         super().__init__()
@@ -304,7 +304,7 @@ class TriggerParsser(Parsser):
         return stor
 
 
-class SequenceParsser(Parsser):
+class SequenceParser(Parser):
     """
         A parser drived by reading in sequence
     """
@@ -388,7 +388,7 @@ class readLSE(LogParser.readVector):
     def __init__(self, stor, trigger,passreader = None):
         super().__init__()
         self.stor = stor
-        self.classifyParser = LogParser.SequenceParsser(trigger ="moved Points:" )
+        self.classifyParser = LogParser.SequenceParser(trigger ="moved Points:" )
         
         self.classifiedPointStor = self.classifyParser.addVecParser("moved Points:","classified_Point",parsType = LogParser.readOnelineVector)
         self.classifiedBoundStor = self.classifyParser.addVecParser("its Cl and Cu:","classified_Bound",parsType =LogParser.readOnelineVector)
@@ -409,15 +409,15 @@ class readLSE(LogParser.readVector):
 
 class experiment:
     def __init__(self,log, name = "exp"):
-        self.parsser = LogParser.TriggerParsser()
+        self.Parser = LogParser.TriggerParser()
         self.stor  = LogParser.simpleStor(name="LSE data")
         trigger = "initState:"
-        pars = readLSE(self.stor,trigger,self.parsser.passreader)
-        self.parsser.passreader.triggers.append(trigger)
-        self.parsser.passreader.readers.append(pars)
+        pars = readLSE(self.stor,trigger,self.Parser.passreader)
+        self.Parser.passreader.triggers.append(trigger)
+        self.Parser.passreader.readers.append(pars)
 
         with open(log,"r") as f:
-            self.parsser(f)
+            self.Parser(f)
 
     def show(self, iterations = 50):
         slctP = np.array([s[0] for s in self.stor.stor[:iterations]])
