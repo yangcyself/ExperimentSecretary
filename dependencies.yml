@@ -1,0 +1,10 @@
+name: experimentSecretary
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pymongo
+  - json
+  - git
+prefix: /home/yangcy/anaconda3/envs/experimentSecretary
+
