@@ -10,32 +10,35 @@ from git import Repo
 import os
 
 class Session_t:
-    columnFuncs = {}
+    # column functions are called after each experiment(with no extra arguments)
+    # its name and return value will be recorded 
+    _columnFuncs = {}
     def  __init__(self,basedir = '.'):
-        self.basedir = basedir
+        self._basedir = basedir
         
-    class decoraGen:
+    class _decoraGen:
         def __get__(self, obj, objtype):
             class Decorator:
                 def __init__(self,f):
                     self.f = f
-                    lst = objtype.columnFuncs.get(objtype,[])
+                    lst = objtype._columnFuncs.get(objtype,[])
                     lst.append(self.f)
-                    objtype.columnFuncs[objtype] = lst
+                    objtype._columnFuncs[objtype] = lst
                     setattr(objtype,f.__name__,f)
 
                 def __get__(self, obj, objtype):
                     return self.f
             return Decorator
-    
-    column = decoraGen()
 
-    def Getcolumns(self):
+    # calling @SOMECLASS.column will regist the decorated function to the column list
+    column = _decoraGen() 
+
+    def _Getcolumns(self):
         return {f.__name__:f(self)
-            for k in self.columnFuncs.keys() if isinstance(self,k) for f in self.columnFuncs[k]}
+            for k in self._columnFuncs.keys() if isinstance(self,k) for f in self._columnFuncs[k]}
             
     def body(self):
-        self._res = os.listdir(".")
+        raise NotImplementedError
 
     def __call__(self):
         """
@@ -45,16 +48,17 @@ class Session_t:
         self.body()
 
         # record the experiment
-        cols = self.Getcolumns()
+        cols = self._Getcolumns()
 
         # json.dumps(anObject, default=json_util.default)
         # json.loads(aJsonString, object_hook=json_util.object_hook)
         
-        os.makedirs(os.path.join(self.basedir,".exps"),exist_ok=True)
+        os.makedirs(os.path.join(self._basedir,".exps"),exist_ok=True)
         # print(json.dumps(cols,default=json_util.default))
-        with open(os.path.join(self.basedir,".exps", datetime.now().strftime("%Y-%m-%d-%H_%M_%S.json")),"w") as f:
+        with open(os.path.join(self._basedir,".exps", datetime.now().strftime("%Y-%m-%d-%H_%M_%S.json")),"w") as f:
             json.dump(cols,f,default=json_util.default)
     
+
 class Session(Session_t):
     """
     The most basic fields an experiment
@@ -62,6 +66,12 @@ class Session(Session_t):
 
     def __init__(self):
         super().__init__()
+
+    def body(self):
+        """
+        An example body
+        """
+        self._res = os.listdir(".")
 
     @Session_t.column
     def date_time(self):
@@ -79,8 +89,13 @@ class Session(Session_t):
         return self._res
 
 
+"""
+To define a column function, you can either call `@Session_t.column` inside the definition body
+or call @Session.column outside of the definition body
+"""
+
 if __name__ == '__main__':
     s = Session()
     s()
-    # print(time.time())
+
     
