@@ -79,6 +79,9 @@ class Session(Session_t):
 
     @Session_t.column
     def git_version(self):
+        """
+            store the current git commit id. 
+        """
         # git log --pretty=format:'%H' -n 1
         repo = Repo(os.path.dirname(os.path.abspath(self._basedir)),search_parent_directories=True)
         headcommit = repo.head.commit
@@ -87,9 +90,13 @@ class Session(Session_t):
 
     @Session_t.column
     def git_diff(self):
+        """
+            store the all changes of the current commit. 
+        """
         repo = Repo(os.path.dirname(os.path.abspath(self._basedir)),search_parent_directories=True)
         t = repo.head.commit.tree
         return repo.git.diff(t)
+
 
 
     @Session_t.column
