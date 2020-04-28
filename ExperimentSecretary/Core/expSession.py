@@ -69,7 +69,7 @@ class Session(Session_t):
 
     def body(self):
         """
-        An example body
+        An example body, override the body method to experiment specific actions
         """
         self._res = os.listdir(".")
 
@@ -80,9 +80,17 @@ class Session(Session_t):
     @Session_t.column
     def git_version(self):
         # git log --pretty=format:'%H' -n 1
-        repo = Repo(os.path.dirname(os.path.abspath(__file__)),search_parent_directories=True)
+        repo = Repo(os.path.dirname(os.path.abspath(self._basedir)),search_parent_directories=True)
         headcommit = repo.head.commit
         return headcommit.hexsha
+
+
+    @Session_t.column
+    def git_diff(self):
+        repo = Repo(os.path.dirname(os.path.abspath(self._basedir)),search_parent_directories=True)
+        t = repo.head.commit.tree
+        return repo.git.diff(t)
+
 
     @Session_t.column
     def res(self):
