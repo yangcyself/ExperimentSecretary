@@ -8,13 +8,18 @@ import time
 import git
 from git import Repo
 import os
+import traceback
+
 
 class Session_t:
     # column functions are called after each experiment(with no extra arguments)
     # its name and return value will be recorded 
     _columnFuncs = {}
-    def  __init__(self,basedir = '.'):
+    def  __init__(self,expName, basedir):
         self._basedir = basedir
+        self._runtimeInfoStor = {} # The information added in runtime, added through `add_info`
+        if(expName is not None):
+            self._runtimeInfoStor["expName"] = expName
         
     class _decoraGen:
         def __get__(self, obj, objtype):
@@ -40,15 +45,10 @@ class Session_t:
     def body(self):
         raise NotImplementedError
 
-    def __call__(self):
-        """
-        The main body of a experiment
-        """
-        # call the body
-        self.body()
-
+    def _summarise(self):
         # record the experiment
         cols = self._Getcolumns()
+        cols.update(self._runtimeInfoStor)
 
         # json.dumps(anObject, default=json_util.default)
         # json.loads(aJsonString, object_hook=json_util.object_hook)
@@ -59,13 +59,41 @@ class Session_t:
             json.dump(cols,f,default=json_util.default)
     
 
+    def __call__(self):
+        """
+        The main body of a experiment
+        """
+        # call the body
+        try:
+            self.body()
+            self._termination = "success"
+        except Exception as ex:
+            self._termination = traceback.format_exc()
+        self._summarise()
+
+    def add_info(self,k,v):
+        """
+            add infomation to `runtimeinfostor`
+        """
+        self._runtimeInfoStor[k] = v
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self,*ex):
+        self._termination =  "success" if ex[0] is None else traceback.format_exc()
+        if (ex[0] is not None):
+            traceback.print_exception(*ex)
+        self._summarise()
+
+
 class Session(Session_t):
     """
     The most basic fields an experiment
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self,expName=None, basedir = '.'):
+        super().__init__(expName, basedir)
 
     def body(self):
         """
@@ -83,7 +111,7 @@ class Session(Session_t):
             store the current git commit id. 
         """
         # git log --pretty=format:'%H' -n 1
-        repo = Repo(os.path.dirname(os.path.abspath(self._basedir)),search_parent_directories=True)
+        repo = Repo(os.path.abspath(self._basedir),search_parent_directories=True)
         headcommit = repo.head.commit
         return headcommit.hexsha
 
@@ -93,7 +121,7 @@ class Session(Session_t):
         """
             store the all changes of the current commit. 
         """
-        repo = Repo(os.path.dirname(os.path.abspath(self._basedir)),search_parent_directories=True)
+        repo = Repo(os.path.abspath(self._basedir),search_parent_directories=True)
         t = repo.head.commit.tree
         return repo.git.diff(t)
 
@@ -101,7 +129,15 @@ class Session(Session_t):
 
     @Session_t.column
     def res(self):
-        return self._res
+        try:
+            return self._res
+        except:
+            return None
+
+
+    @Session_t.column
+    def termination(self):
+        return self._termination
 
 
 """
