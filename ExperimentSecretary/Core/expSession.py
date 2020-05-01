@@ -70,7 +70,7 @@ class Session_t:
             self._termination = "success"
         except Exception as ex:
             self._termination = traceback.format_exc()
-            print(self._termination)
+            print("Termination:", self._termination)
         self._summarise()
 
     def add_info(self,k,v):
