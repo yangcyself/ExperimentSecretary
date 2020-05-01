@@ -18,6 +18,7 @@ class Session_t:
     def  __init__(self,expName, basedir):
         self._basedir = basedir
         self._runtimeInfoStor = {} # The information added in runtime, added through `add_info`
+        self._storFileName = datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
         if(expName is not None):
             self._runtimeInfoStor["expName"] = expName
         
@@ -55,7 +56,7 @@ class Session_t:
         
         os.makedirs(os.path.join(self._basedir,".exps"),exist_ok=True)
         # print(json.dumps(cols,default=json_util.default))
-        with open(os.path.join(self._basedir,".exps", datetime.now().strftime("%Y-%m-%d-%H_%M_%S.json")),"w") as f:
+        with open(os.path.join(self._basedir,".exps", self._storFileName+".json"),"w") as f:
             json.dump(cols,f,default=json_util.default)
     
 
@@ -69,6 +70,7 @@ class Session_t:
             self._termination = "success"
         except Exception as ex:
             self._termination = traceback.format_exc()
+            print(self._termination)
         self._summarise()
 
     def add_info(self,k,v):
