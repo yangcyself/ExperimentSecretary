@@ -33,3 +33,4 @@ pip install -e .
 
 ## dependencies
 - pymongo
+- gitpython
