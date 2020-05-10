@@ -30,3 +30,6 @@ Git clone into local and then run
 pip install -e .
 ```
 >`-e` will create a symbolic link for this package, so that you can modify this package without reinstall it.
+
+## dependencies
+- pymongo
