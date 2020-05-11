@@ -9,6 +9,8 @@ import git
 from git import Repo
 import os
 import traceback
+import platform
+
 
 
 class Session_t:
@@ -141,6 +143,13 @@ class Session(Session_t):
     def termination(self):
         return self._termination
 
+
+    @Session_t.column
+    def platform(self):
+        """
+        The name of the computer
+        """
+        return platform.node()
 
 """
 To define a column function, you can either call `@Session_t.column` inside the definition body
