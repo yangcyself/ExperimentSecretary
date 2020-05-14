@@ -96,8 +96,12 @@ class Session(Session_t):
     The most basic fields an experiment
     """
 
-    def __init__(self,expName=None, basedir = '.'):
+    def __init__(self,expName=None, basedir = '.', **kwargs):
+        """
+        The init value will save all the kwargs, so that user can pass whatever he want to stor to the init of parent class
+        """
         super().__init__(expName, basedir)
+        self.add_info("Session Parameters",kwargs)
 
     def body(self):
         """
