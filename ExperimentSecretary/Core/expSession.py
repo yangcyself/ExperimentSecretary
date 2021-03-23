@@ -59,7 +59,7 @@ class Session_t:
         os.makedirs(os.path.join(self._basedir,".exps"),exist_ok=True)
         # print(json.dumps(cols,default=json_util.default))
         with open(os.path.join(self._basedir,".exps", self._storFileName+".json"),"w") as f:
-            json.dump(cols,f,default=json_util.default)
+            json.dump(cols,f, indent = 2, default=json_util.default)
     
 
     def __call__(self):
@@ -102,6 +102,10 @@ class Session(Session_t):
         """
         super().__init__(expName, basedir)
         self.add_info("Session Parameters",kwargs)
+        
+        self._git_version_ = self._git_version()
+        self._init_time_ = datetime.now()
+        self._git_diff_ = self._git_diff()
 
     def body(self):
         """
@@ -110,8 +114,17 @@ class Session(Session_t):
         self._res = os.listdir(".")
 
     @Session_t.column
-    def date_time(self):
+    def fin_time(self):
         return datetime.now()
+
+    @Session_t.column
+    def init_time(self):
+        return self._init_time_
+
+    def _git_version(self):
+        repo = Repo(os.path.abspath(self._basedir),search_parent_directories=True)
+        headcommit = repo.head.commit
+        return headcommit.hexsha
 
     @Session_t.column
     def git_version(self):
@@ -119,21 +132,19 @@ class Session(Session_t):
             store the current git commit id. 
         """
         # git log --pretty=format:'%H' -n 1
-        repo = Repo(os.path.abspath(self._basedir),search_parent_directories=True)
-        headcommit = repo.head.commit
-        return headcommit.hexsha
+        return self._git_version_
 
+    def _git_diff(self):
+        repo = Repo(os.path.abspath(self._basedir),search_parent_directories=True)
+        t = repo.head.commit.tree
+        return repo.git.diff(t)
 
     @Session_t.column
     def git_diff(self):
         """
             store the all changes of the current commit. 
         """
-        repo = Repo(os.path.abspath(self._basedir),search_parent_directories=True)
-        t = repo.head.commit.tree
-        return repo.git.diff(t)
-
-
+        return self._git_diff_
 
     @Session_t.column
     def res(self):
