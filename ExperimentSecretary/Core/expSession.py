@@ -11,6 +11,9 @@ import os
 import traceback
 import platform
 
+import sys
+import io
+import types
 
 
 class Session_t:
@@ -90,13 +93,43 @@ class Session_t:
             traceback.print_exception(*ex)
         self._summarise()
 
+class stdLogger:
+    """
+        Log all the `write` and `writeLines` into a string stream
+        modify the stdobj in construction, and change it back in destruction
+    """
+    def __init__(self, stdobj):
+        self.stdobj = stdobj
+        self.sys_write = stdobj.write
+        self.sys_writelines = stdobj.writelines
+
+        self.output = io.StringIO()
+
+        def logf_write(self_, text):
+            self.output.write(text)
+            self.sys_write(text)
+            
+
+        def logf_writelines(self_, text):
+            self.output.writelines(text)
+            self.sys_writelines(text)
+            
+        stdobj.write = types.MethodType(logf_write, stdobj )
+        stdobj.writelines = types.MethodType(logf_writelines, stdobj )
+
+    def __del__(self):
+        self.stdobj.write = types.MethodType(self.sys_write, self.stdobj )
+        self.stdobj.writelines = types.MethodType(self.sys_writelines, self.stdobj )
+
+    def getvalue(self):
+        return self.output.getvalue()
 
 class Session(Session_t):
     """
     The most basic fields an experiment
     """
 
-    def __init__(self,expName=None, basedir = '.', **kwargs):
+    def __init__(self,expName=None, basedir = '.', terminalLog = False, **kwargs):
         """
         The init value will save all the kwargs, so that user can pass whatever he want to stor to the init of parent class
         """
@@ -106,6 +139,11 @@ class Session(Session_t):
         self._git_version_ = self._git_version()
         self._init_time_ = datetime.now()
         self._git_diff_ = self._git_diff()
+
+        self.terminalLog = terminalLog
+        if(self.terminalLog):
+            self.stdoutLog = stdLogger(sys.stdout)
+            self.stderrLog = stdLogger(sys.stderr)
 
     def body(self):
         """
@@ -165,6 +203,15 @@ class Session(Session_t):
         The name of the computer
         """
         return platform.node()
+    
+    @Session_t.column
+    def stdout(self):
+        return self.stdoutLog.getvalue() if self.terminalLog else None
+    
+    @Session_t.column
+    def stderr(self):
+        return self.stderrLog.getvalue() if self.terminalLog else None
+    
 
 """
 To define a column function, you can either call `@Session_t.column` inside the definition body
